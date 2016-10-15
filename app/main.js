@@ -1,5 +1,6 @@
 'use strict'
 
+let geoip = require('geoip-lite')
 let express = require('express')
 let Primus = require('primus')
 let http = require('http')
@@ -25,6 +26,13 @@ primus.on('connection', function (spark) {
 	setInterval(function () {
 		spark.write(getRandCoord())
 	}, 1000)
+
+	setInterval(function () {
+		spark.write({
+			type: 'requests',
+			value: (Math.random() * 5 + 5)
+		})
+	} , 1000)
 })
 
 primus.save(__dirname + '/../public/primus.js')
@@ -34,3 +42,7 @@ function getRandCoord () {
   return [((Math.random() * 10) - 5) + 15,
   ((Math.random() * 10) - 5) + 63]
 }
+
+console.log(geoip.lookup('85.224.105.149'))
+
+console.log(geoip.lookup('85.24.214.204'))

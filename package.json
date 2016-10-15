@@ -10,6 +10,7 @@
   "license": "ISC",
   "dependencies": {
     "express": "^4.14.0",
+    "geoip-lite": "^1.1.8",
     "primus": "^6.0.3",
     "sockjs": "^0.3.18"
   }
