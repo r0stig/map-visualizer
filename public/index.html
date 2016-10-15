@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+body {
+  background: #ccc;
+}
+path {
+  fill: #FF6600;
+}
+.state.i { fill: #ddc; }
+.state.a { fill: #cdd; }
+.state.c { fill: #cdc; }
+.state.d { fill: #dcd; }
+
+</style>
+<body>
+  <script src="primus/primus.js"></script>
+<script src="//d3js.org/d3.v3.min.js" charset="utf-8"></script>
+<script src="//d3js.org/topojson.v1.min.js"></script>
+<script>
+
+var primus = new Primus("http://localhost:3000")
+primus.on('open', function () {
+  console.log('primus open')
+})
+
+var width = 960,
+    height = 1160;
+
+var svg = d3.select("body").append("svg")
+    .attr("width", width)
+    .attr("height", height);
+
+
+d3.json("geo/sweden.json", function(error, sweden) {
+  if (error) return console.error(error);
+  console.log(sweden);
+
+    var subunits = topojson.feature(sweden, sweden.objects.subunits);
+    var states = topojson.feature(sweden, sweden.objects.states);
+
+    var projection = d3.geo.albers()
+	    .center([15, 63])
+	    .rotate([0, 0])
+	    .parallels([50, 60])
+	    .scale(4000)
+	    .translate([width / 2, height / 2]);
+
+    var path = d3.geo.path()
+    	.projection(projection);
+
+
+	svg.append("path")
+		.datum(subunits)
+		.attr("d", path);
+
+    svg.append("path")
+      .datum(states)
+      .attr("d", path);
+
+    svg.selectAll(".state")
+      .data(topojson.feature(sweden, sweden.objects.states).features)
+      .enter().append("path")
+      .style("stroke", "#D95700")
+        /*.attr("class", function(d) { return "state " + String.fromCharCode(97 + d.properties.name.length % 10); })*/
+        .attr("d", path);
+
+  var points = []
+  // [11.9449204, 57.7214769]
+  function receive (data) {
+    var coord = getRandCoord()
+    points.push(coord)
+    setTimeout(function () {
+      var index = arrayObjectIndexOf(points, coord.id, "id")
+      console.log('skall ta bort', coord.id, 'index', index, points)
+      points.splice(index, 1)
+    }, 2000)
+  }
+
+  // points
+  //var gothenburg = [11.9449204, 57.7214769]
+  //var gothenburg = [15, 63]
+
+  function drawPoint (point) {
+    //points = []
+    points.push(point)
+    console.log('skall rita ut', points)
+    var content = svg.selectAll("circle")
+      .data(points)
+
+    
+    content.enter()
+        .append("circle")
+        .attr("r", "8px")
+
+    content
+      .attr("cx", function (d) { 
+        //console.log("ee", d)
+        //console.log('aa', projection(d))
+        return projection(d)[0]
+      })
+      .attr("cy", function (d) { 
+        return projection(d)[1]
+      })
+      .style({
+        "opacity": 0,
+        "fill": "white"
+      })
+      .transition()
+      .duration(1000)
+      .ease("circle")
+      .style("opacity", 1)
+      .each("end", function (data, index) {
+        points.splice(index, 1)
+      })
+        
+
+      content
+        .exit()
+        .transition()
+        .duration(1000)
+        .ease("circle")
+        .style("opacity", 0)
+        .remove()
+  }
+
+  function drawPointAgain (point) {
+    //points = []
+    console.log('skall rita ut', point)
+
+    var rnd = parseInt(Math.random() * Number.MAX_SAFE_INTEGER);
+
+    svg.append("circle")
+      .attr("id", "dot" + rnd)
+      .attr("cx", function (d) { 
+        return projection(point)[0]
+      })
+      .attr("cy", function (d) { 
+        return projection(point)[1]
+      })
+      .attr("r", 8)
+      .style({
+        "opacity": 0,
+        "fill": "#fff"
+      })
+      
+      .transition()
+      .duration(250)
+      .ease("circle")
+      .style("opacity", 1)
+      .each("end", function (data, index) {
+        
+        svg.selectAll("circle#dot" + rnd)
+        .style("opacity", 1)
+        .transition()
+        .duration(2500)
+        .style("opacity", 0)
+        .remove()
+      })
+  }
+
+  primus.on('data', function (data) {
+    drawPointAgain(data)
+  })
+
+/*
+  function drawPoints () {
+    //svg.selectAll("circle").style({
+    //  "opacity": "0"
+    //}).remove()
+
+    var content = svg.selectAll("circle")
+      .data(points)
+    
+    content.enter()
+        .append("circle")
+        .attr("cx", function (d) { 
+          console.log("ee", d)
+          console.log('aa', projection([d.lat, d.lng]))
+          return projection([d.lat, d.lng])[0]
+        })
+        .attr("cy", function (d) { 
+          return projection([d.lat, d.lng])[1]
+        })
+        .attr("r", "8px")
+        .style({
+          "opacity": 0,
+          "fill": "red"
+        })
+        .transition()
+        .duration(1000)
+        .ease("circle")
+        .style("opacity", 1)
+
+      content
+        .exit()
+        .transition()
+        .duration(1000)
+        .ease("circle")
+        .style("opacity", 0)
+        .remove()
+  }
+  */
+/*
+  setInterval(function () {
+    //receive()
+    //drawPoints()
+    drawPointAgain(getRandCoordSimple())
+  }, 1000)
+  */
+//drawPoint(getRandCoordSimple())
+/*
+  setTimeout(function () {
+    console.log('remove points...')
+    points = []
+  }, 3000)*/
+
+
+  	//svg.append("path")
+    //  .datum(topojson.feature(sweden, sweden.objects.subunits))
+    //  .attr("d", d3.geo.path().projection(d3.geo.mercator()));
+});
+
+function getRandCoord () {
+  return {
+    id: Math.floor(Math.random() * 1000),
+    lat: ((Math.random() * 10) - 5) + 15,
+    lng: ((Math.random() * 10) - 5) + 63
+  }
+}
+
+function getRandCoordSimple () {
+  return [((Math.random() * 10) - 5) + 15,
+  ((Math.random() * 10) - 5) + 63]
+}
+
+function arrayObjectIndexOf(myArray, searchTerm, property) {
+    for(var i = 0, len = myArray.length; i < len; i++) {
+        if (myArray[i][property] === searchTerm) return i;
+    }
+    return -1;
+}
+
+
+</script>
